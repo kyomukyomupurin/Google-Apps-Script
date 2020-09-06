@@ -32,25 +32,40 @@ function convert_time(timestamp) {
   return String(day) + s1 + String(hour) + s2 + String(minute) + s3;
 }
 
-function gerContestInfo() {
+function getContestInfo() {
   let response = UrlFetchApp.fetch(codeforces_contest_url, {
     "method" : "GET",
     "contentType" : "application/json",
   });
   let r_json = JSON.parse(response.getContentText());
+  let messages = [];
   for (let i = 0; i < NUM_FUTURE_CONTEST; ++i) {
     if (r_json.result[i].phase == "BEFORE") {
       let start_unix_time = r_json.result[i].startTimeSeconds;
       let dateTime = new Date(start_unix_time * 1000);
       let time_before_start = -r_json.result[i].relativeTimeSeconds;
       let message = r_json.result[i].name + " start at " + dateTime + ", in " + convert_time(time_before_start);
-      Logger.log(message);
+      messages.push(message);
     }
   }
+  messages.reverse();
+
+  return messages;
 }
 
-/*
-function testFunction() {
-
+function notifyContestInfo(message) {
+  let options = {
+    "method" : "post",
+    "payload" : "message=" + message,
+    "headers" : {"Authorization" : "Bearer " + line_notify_token}
+  };
+  UrlFetchApp.fetch(line_notify_url, options);
+  Utilities.sleep(1000);
 }
-*/
+
+function mainFunction() {
+  let commingContests = getContestInfo();
+  for (let contest of commingContests) {
+    notifyContestInfo(contest);
+  }
+}
